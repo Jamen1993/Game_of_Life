@@ -1,5 +1,5 @@
-with Gui;
 with Game;
+with Terminal_Ui;
 
 procedure Main is
 begin

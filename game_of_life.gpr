@@ -1,18 +1,22 @@
+with "vt100/vt100.gpr";
 with "gtkada";
 
-project Game_of_Life is
-
+project Game_Of_Life is
    for Source_Dirs use ("src");
    for Object_Dir use "build";
    for Main use ("main.adb");
 
    package Compiler is
-      for Switches ("ada") use ("-gnatyy", "-gnatwa.n", "-gnatf", "-gnato", "-gnata", "-gnatVa", "-gnatyM160");
+      for Default_Switches ("ada") use ("-gnatyy", "-gnatwa.n", "-gnatf", "-gnato", "-gnata", "-gnatVa", "-gnatyM100");
    end Compiler;
 
    package Linker is
       for Switches ("ada") use ("-fprofile-generate", "-fprofile-generate");
    end Linker;
 
-end Game_of_Life;
+   package Builder is
+      for Switches ("ada") use ("-j0");
+   end Builder;
+
+end Game_Of_Life;
 
