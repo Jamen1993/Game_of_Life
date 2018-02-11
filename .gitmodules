@@ -1,0 +1,3 @@
+[submodule "vt100"]
+	path = vt100
+	url = https://github.com/darkestkhan/vt100.git
