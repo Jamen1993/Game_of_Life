@@ -1,128 +1,107 @@
+with Ada.Text_IO; use Ada.Text_IO;
+with Ada.Numerics.Discrete_Random;
+
+with VT100; use VT100;
+
 package body Game is
 
-   protected body Protected_Game_Field_t is
-      procedure set_all (new_field : in Game_Field_t) is
-      begin
-         game_field := new_field;
-      end set_all;
+    procedure Init_Game is
+        package Rand is new Ada.Numerics.Discrete_Random(Game_Field_Index_t);
+        generator : Rand.Generator;
+    begin
+        for it in 1 .. 500 loop
+            game_field(Rand.Random(generator), Rand.Random(generator)) := alive;
+        end loop;
+    end Init_Game;
 
-      procedure set_cell_state (x, y : in Game_Field_Index_t; new_state : in Cell_State_t) is
-      begin
-         game_field (x, y) := new_state;
-      end set_cell_state;
+    procedure Print_Game_Field is
+        title : constant String := "Conways Game of Life";
+    begin
+        Clear_Screen;
+        -- Print title
+        Set_Foreground_Color(Green);
+        Put_Line(title);
+        Set_Foreground_Color(Default);
+        for it in title'Range loop
+            Put("-");
+        end loop;
+        New_Line;
+        -- Print cells
+        for ity in game_field'Range(1) loop
+            for itx in game_field'Range(2) loop
+                case game_field(ity, itx) is
+                    when dead =>
+                        Set_Foreground_Color(Red);
+                        Put("X");
+                    when alive =>
+                        Set_Foreground_Color(Green);
+                        Put("O");
+                end case;
+                Set_Foreground_Color(Default);
+                Put(" ");
+            end loop;
+            New_Line;
+        end loop;
+        Set_Background_Color(Default);
+    end Print_Game_Field;
 
-      function get_all return Game_Field_t is
-      begin
-         return game_field;
-      end get_all;
+    procedure Step_Game is
+        new_game_field    : Game_Field_t := game_field;
+        living_neighbours : Living_Neighbours_t;
+    begin
+        for ity in game_field'Range(1) loop
+            for itx in game_field'Range(2) loop
+                living_neighbours := Count_Neighbours(ity, itx);
 
-      function get_cell_state (x, y : in Game_Field_Index_t) return Cell_State_t is
-      begin
-         return game_field (x, y);
-      end get_cell_state;
+                if living_neighbours <= 1 or living_neighbours > 3 then
+                    new_game_field(ity, itx) := dead;
+                elsif living_neighbours = 3 then
+                    new_game_field(ity, itx) := alive;
+                end if;
+            end loop;
+        end loop;
 
-   end Protected_Game_Field_t;
+        game_field := new_game_field;
+    end Step_Game;
 
-   protected body Game_Control_t is
-      procedure set_task_period (new_task_period : in Time_Span) is
-      begin
-         task_period := new_task_period;
-      end set_task_period;
+    function Count_Neighbours (y, x : in Game_Field_Index_t) return Living_Neighbours_t is
+        living_neighbours : Living_Neighbours_t := 0;
 
-      procedure set_autoprogression_active (new_state : in Boolean) is
-      begin
-         autoprogression_active := new_state;
-      end set_autoprogression_active;
+        iyl               : Natural := Natural(y) - 1;
+        iyh               : Natural := Natural(y) + 1;
+        ixl               : Natural := Natural(x) - 1;
+        ixh               : Natural := Natural(x) + 1;
 
-      procedure set_next_step_single is
-      begin
-         next_step_single := True;
-      end set_next_step_single;
+        procedure incr (self : in out Living_Neighbours_t) is
+        begin
+            self := self + 1;
+        end incr;
+    begin
+        -- Handle out of range indices
+        if iyl = 0 then
+            iyl := 1;
+        end if;
+        if iyh > Natural(Game_Field_Index_t'Last) then
+            iyh := Natural(Game_Field_Index_t'Last);
+        end if;
+        if ixl = 0 then
+            ixl := 1;
+        end if;
+        if ixh > Natural(Game_Field_Index_t'Last) then
+            ixh := Natural(Game_Field_Index_t'Last);
+        end if;
+        -- Count living neighbours
+        for ity in iyl .. iyh loop
+            for itx in ixl .. ixh loop
+                if not ((Game_Field_Index_t(itx) = x) and (Game_Field_Index_t(ity) = y)) then
+                    if game_field(Game_Field_Index_t(ity), Game_Field_Index_t(itx)) = alive then
+                        incr(living_neighbours);
+                    end if;
+                end if;
+            end loop;
+        end loop;
 
-      function get_task_period return Time_Span is
-      begin
-         return task_period;
-      end get_task_period;
-
-      function is_autoprogression_active return Boolean is
-      begin
-         return autoprogression_active;
-      end is_autoprogression_active;
-
-      procedure is_next_step_single (result : out Boolean) is
-      begin
-         if next_step_single then
-            result := True;
-            next_step_single := False;
-         else
-            result := False;
-         end if;
-      end is_next_step_single;
-   end Game_Control_t;
-
-   task body Game_Task is
-      next_time : Time := Clock;
-
-      execute_step : Boolean;
-   begin
-      loop
-         game_control.is_next_step_single (execute_step);
-         execute_step := execute_step or game_control.is_autoprogression_active;
-
-         if execute_step then
-            determine_new_cell_states;
-         end if;
-
-         next_time := next_time + game_control.get_task_period;
-         delay until next_time;
-      end loop;
-   end Game_Task;
-
-   procedure determine_new_cell_states is
-      new_game_field : Game_Field_t;
-      living_neighbours : Living_Neighbours_t;
-   begin
-      for it_x in new_game_field'Range (1) loop
-         for it_y in new_game_field'Range (2) loop
-            living_neighbours := count_living_neighbours (it_x, it_y);
-
-            if living_neighbours = 3 then
-               new_game_field (it_x, it_y) := alive;
-            elsif living_neighbours < 2 then
-               new_game_field (it_x, it_y) := dead;
-            elsif living_neighbours > 3 then
-               new_game_field (it_x, it_y) := dead;
-            else
-               new_game_field (it_x, it_y) := game_field.get_cell_state (it_x, it_y);
-            end if;
-         end loop;
-      end loop;
-
-      game_field.set_all (new_game_field);
-   end determine_new_cell_states;
-
-   function count_living_neighbours (x, y : in Game_Field_Index_t) return Living_Neighbours_t is
-      living_neighbours : Living_Neighbours_t := 0;
-
-      x_to_test, y_to_test : Positive;
-   begin
-      for x_deviation in Integer range -1 .. 1 loop
-         for y_deviation in Integer range -1 .. 1 loop
-            --  Skip the targeted cell itself
-            if not (x_deviation = 0 and y_deviation = 0) then
-               x_to_test := (x + x_deviation + Game_Field_Index_t'Last) mod Game_Field_Index_t'Last;
-               y_to_test := (y + y_deviation + Game_Field_Index_t'Last) mod Game_Field_Index_t'Last;
-
-               case game_field.get_cell_state (x_to_test, y_to_test) is
-                  when alive => living_neighbours := living_neighbours + 1;
-                  when dead => null;
-               end case;
-            end if;
-         end loop;
-      end loop;
-
-      return living_neighbours;
-
-   end count_living_neighbours;
+        return living_neighbours;
+    end Count_Neighbours;
 
 end Game;
