@@ -6,7 +6,7 @@ with VT100; use VT100;
 package body Game is
 
     procedure Init_Game (to_set : in Positive) is
-        package Rand is new Ada.Numerics.Discrete_Random(Game_Field_Index_t);
+        package Rand is new Ada.Numerics.Discrete_Random(Result_Subtype => Game_Field_Index_t);
         generator : Rand.Generator;
 
         set : Natural := 0;
