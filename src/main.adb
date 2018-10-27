@@ -6,7 +6,7 @@ procedure Main is
 
 begin
     Reset;
-    Init_Game;
+    Init_Game(500);
     Print_Game_Field;
     delay 1.0;
 

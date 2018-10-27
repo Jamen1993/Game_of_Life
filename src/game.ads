@@ -6,7 +6,7 @@ package Game is
     type Game_Field_Index_t is new Positive range 1 .. 50;
     type Game_Field_t is array (Game_Field_Index_t, Game_Field_Index_t) of Cell_State_t;
     
-    procedure Init_Game;
+    procedure Init_Game (to_set : in Positive);
     procedure Print_Game_Field;
     procedure Step_Game;
     

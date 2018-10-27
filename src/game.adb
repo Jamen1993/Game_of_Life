@@ -5,12 +5,21 @@ with VT100; use VT100;
 
 package body Game is
 
-    procedure Init_Game is
+    procedure Init_Game (to_set : in Positive) is
         package Rand is new Ada.Numerics.Discrete_Random(Game_Field_Index_t);
         generator : Rand.Generator;
+
+        set : Natural := 0;
+        x, y : Game_Field_Index_t;
     begin
-        for it in 1 .. 500 loop
-            game_field(Rand.Random(generator), Rand.Random(generator)) := alive;
+        while set < to_set loop
+            x := Rand.Random(generator);
+            y := Rand.Random(generator);
+
+            if game_field(y, x) = dead then
+                game_field(y, x) := alive;
+                set := set + 1;
+            end if;
         end loop;
     end Init_Game;
 
