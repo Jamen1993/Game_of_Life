@@ -5,16 +5,26 @@ with VT100; use VT100;
 
 package body Game is
 
-    procedure Init_Game (to_set : in Positive) is
-        package Rand is new Ada.Numerics.Discrete_Random(Result_Subtype => Game_Field_Index_t);
-        generator : Rand.Generator;
+    procedure Init_Game (sy, sx : in Positive; to_set : in Positive) is
+        type Indexy_T is new Positive range 1 .. sy;
+        type Indexx_T is new Positive range 1 .. sx;
+        package Randy is new Ada.Numerics.Discrete_Random(Result_Subtype => Indexy_T);
+        package Randx is new Ada.Numerics.Discrete_Random(Result_Subtype => Indexx_T);
+        generatorx : Randx.Generator;
+        generatory : Randy.Generator;
 
         set : Natural := 0;
         x, y : Game_Field_Index_t;
     begin
+        Randx.Reset(generatorx, 100);
+        Randy.Reset(generatory, 500);
+
+        game_field := new Game_Field_t (1 .. Game_Field_Index_t(sy), 1 .. Game_Field_Index_t(sx));
+        game_field.all := (others => (others => dead));
+
         while set < to_set loop
-            x := Rand.Random(generator);
-            y := Rand.Random(generator);
+            x := Game_Field_Index_t(Randx.Random(generatorx));
+            y := Game_Field_Index_t(Randy.Random(generatory));
 
             if game_field(y, x) = dead then
                 game_field(y, x) := alive;
@@ -55,7 +65,7 @@ package body Game is
     end Print_Game_Field;
 
     procedure Step_Game is
-        new_game_field    : Game_Field_t := game_field;
+        new_game_field    : Game_Field_t := game_field.all;
         living_neighbours : Living_Neighbours_t;
     begin
         for ity in game_field'Range(1) loop
@@ -70,7 +80,7 @@ package body Game is
             end loop;
         end loop;
 
-        game_field := new_game_field;
+        game_field.all := new_game_field;
     end Step_Game;
 
     function Count_Neighbours (y, x : in Game_Field_Index_t) return Living_Neighbours_t is
@@ -90,14 +100,14 @@ package body Game is
         if iyl = 0 then
             iyl := 1;
         end if;
-        if iyh > Natural(Game_Field_Index_t'Last) then
-            iyh := Natural(Game_Field_Index_t'Last);
+        if iyh > Natural(game_field'Last(1)) then
+            iyh := Natural(game_field'Last(1));
         end if;
         if ixl = 0 then
             ixl := 1;
         end if;
-        if ixh > Natural(Game_Field_Index_t'Last) then
-            ixh := Natural(Game_Field_Index_t'Last);
+        if ixh > Natural(game_field'Last(2)) then
+            ixh := Natural(game_field'Last(2));
         end if;
         -- Count living neighbours
         for ity in iyl .. iyh loop
